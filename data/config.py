@@ -172,9 +172,15 @@ pascal_sbd_dataset = dataset_base.copy({
     'class_names': PASCAL_CLASSES,
 })
 
-
-
-
+strawberry_dataset = dataset_base.copy({
+  'name': 'Strawberry Detection',
+  'train_info': '../train_annotation/dataset.json',
+  'train_images': '../train',
+  'valid_info': '../test_annotation/dataset.json',
+  'valid_images': '../test',
+  'class_names': ('Leaf Spot', 'Powdery Mildew Leaf', 'Gray Mold', 'Anthracnose Fruit Rot', 'Angular Leafspot', 'Powdery Mildew Fruit', 'Blossom Blight'),
+  'label_map': { 0:  1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 7 }
+})
 
 # ----------------------- TRANSFORMS ----------------------- #
 
@@ -803,6 +809,16 @@ yolact_plus_resnet50_config = yolact_plus_base_config.copy({
         'preapply_sqrt': False,
         'use_square_anchors': False,
     }),
+})
+
+yolact_plus_resnet50_strawberry_config = yolact_plus_resnet50_config.copy({
+    'name': 'yolact_plus_resnet50_strawberry',
+    # Dataset stuff
+    'dataset': strawberry_dataset,
+    'num_classes': len(strawberry_dataset.class_names) + 1,
+
+    # Image Size
+    'max_size': 419,
 })
 
 

@@ -1015,8 +1015,17 @@ def calc_map(ap_data):
                 if not ap_obj.is_empty():
                     aps[iou_idx][iou_type].append(ap_obj.get_ap())
 
-    all_maps = {'box': OrderedDict(), 'mask': OrderedDict()}
+        all_maps = {'box': OrderedDict(), 'mask': OrderedDict()}
+        for iou_type in ('box', 'mask'):
+            all_maps[iou_type]['all'] = 0  # Make this first in the ordereddict
+            for i, threshold in enumerate(iou_thresholds):
+                mAP = aps[i][iou_type][_class] * 100 if len(aps[i][iou_type]) > 0 else 0
+                all_maps[iou_type][int(threshold * 100)] = mAP
+            all_maps[iou_type]['all'] = (sum(all_maps[iou_type].values()) / (len(all_maps[iou_type].values()) - 1))
+        print('#################### Class:', cfg.dataset.class_names[_class], '####################')
+        print_maps(all_maps)
 
+    all_maps = {'box': OrderedDict(), 'mask': OrderedDict()}
     # Looking back at it, this code is really hard to read :/
     for iou_type in ('box', 'mask'):
         all_maps[iou_type]['all'] = 0 # Make this first in the ordereddict
