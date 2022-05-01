@@ -182,6 +182,16 @@ strawberry_dataset = dataset_base.copy({
   'label_map': { 0:  1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 7 }
 })
 
+wgisd_dataset = dataset_base.copy({
+  'name': 'Embrapa Grape Detection',
+  'train_info': './dataset/wgisd/train_annotations.json',
+  'train_images': './dataset/wgisd/train',
+  'valid_info': './dataset/wgisd/test_annotations.json',
+  'valid_images': './dataset/wgisd/train',
+  'class_names': ('None', 'Grape',),
+  'label_map': { 0:  1, 1: 2}
+})
+
 # ----------------------- TRANSFORMS ----------------------- #
 
 resnet_transform = Config({
@@ -819,6 +829,16 @@ yolact_plus_resnet50_strawberry_config = yolact_plus_resnet50_config.copy({
 
     # Image Size
     'max_size': 419,
+})
+
+yolact_plus_resnet50_wgisd_config = yolact_plus_resnet50_config.copy({
+    'name': 'yolact_plus_resnet50_wgisd',
+    # Dataset stuff
+    'dataset': wgisd_dataset,
+    'num_classes': len(wgisd_dataset.class_names) + 1,
+
+    # Image Size
+    'max_size': 700,
 })
 
 
