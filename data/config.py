@@ -187,7 +187,7 @@ wgisd_dataset = dataset_base.copy({
   'train_info': './dataset/wgisd/train_annotations.json',
   'train_images': './dataset/wgisd/train',
   'valid_info': './dataset/wgisd/test_annotations.json',
-  'valid_images': './dataset/wgisd/train',
+  'valid_images': './dataset/wgisd/test',
   'class_names': ('None', 'Grape',),
   'label_map': { 0:  1, 1: 2}
 })
@@ -838,7 +838,7 @@ yolact_plus_resnet50_wgisd_config = yolact_plus_resnet50_config.copy({
     'num_classes': len(wgisd_dataset.class_names) + 1,
 
     # Image Size
-    'max_size': 700,
+    'max_size': 500,
 })
 
 
