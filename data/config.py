@@ -182,6 +182,16 @@ strawberry_dataset = dataset_base.copy({
   'label_map': { 0:  1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 7 }
 })
 
+strawberry_roboflow_dataset = dataset_base.copy({
+  'name': 'Strawberry Detection Roboflow',
+  'train_info': './dataset/StrawberryDisease-2/train_annotations.json',
+  'train_images': './dataset/StrawberryDisease-2/train',
+  'valid_info': './dataset/StrawberryDisease-2/test_annotations.json',
+  'valid_images': './dataset/StrawberryDisease-2/test',
+  'class_names': ('Angular Leafspot', 'Leaf Spot', 'Gray Mold', 'Anthracnose Fruit Rot', 'Powdery Mildew Leaf', 'Powdery Mildew Fruit', 'Blossom Blight'),
+  'label_map': { 0:  1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 7 }
+})
+
 wgisd_dataset = dataset_base.copy({
   'name': 'Embrapa Grape Detection',
   'train_info': './dataset/wgisd/train_annotations.json',
@@ -839,6 +849,16 @@ yolact_plus_resnet50_wgisd_config = yolact_plus_resnet50_config.copy({
 
     # Image Size
     'max_size': 500,
+})
+
+yolact_plus_resnet50_strawberry_roboflow_config = yolact_plus_resnet50_config.copy({
+    'name': 'yolact_plus_resnet50_strawberry_roboflow',
+    # Dataset stuff
+    'dataset': strawberry_roboflow_dataset,
+    'num_classes': len(strawberry_roboflow_dataset.class_names) + 1,
+
+    # Image Size
+    'max_size': 419,
 })
 
 
