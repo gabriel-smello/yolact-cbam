@@ -202,6 +202,16 @@ wgisd_dataset = dataset_base.copy({
   'label_map': { 0:  1, 1: 2}
 })
 
+bracot_dataset = dataset_base.copy({
+  'name': 'Bracot',
+  'train_info': './dataset/bracot-data/train_annotation_coco.json',
+  'train_images': './dataset/bracot-data/train',
+  'valid_info': './dataset/bracot-data/test_annotation_coco.json',
+  'valid_images': './dataset/bracot-data/test',
+  'class_names': ('Leaf', 'None',),
+  'label_map': { 0:  1, 1: 2}
+})
+
 # ----------------------- TRANSFORMS ----------------------- #
 
 resnet_transform = Config({
@@ -859,6 +869,16 @@ yolact_plus_resnet50_strawberry_roboflow_config = yolact_plus_resnet50_config.co
 
     # Image Size
     'max_size': 419,
+})
+
+yolact_plus_resnet50_bracot_config = yolact_plus_resnet50_config.copy({
+    'name': 'yolact_plus_resnet50_bracot',
+    # Dataset stuff
+    'dataset': bracot_dataset,
+    'num_classes': len(bracot_dataset.class_names) + 1,
+
+    # Image Size
+    'max_size': 500,
 })
 
 
