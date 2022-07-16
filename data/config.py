@@ -212,6 +212,16 @@ bracot_dataset = dataset_base.copy({
   'label_map': { 0:  1, 1: 2}
 })
 
+rocole_dataset = dataset_base.copy({
+  'name': 'Rocole',
+  'train_info': './dataset/rocole/train_annotations.coco.json',
+  'train_images': './dataset/rocole/train',
+  'valid_info': './dataset/rocole/test_annotations.coco.json',
+  'valid_images': './dataset/rocole/test',
+  'class_names': ('healthy', 'red_spider_mite', 'rust_level_1', 'rust_level_2', 'rust_level_3', 'rust_level_4',),
+  'label_map': { 0:  1, 1: 2, 2:3, 4:5, 5:6}
+})
+
 # ----------------------- TRANSFORMS ----------------------- #
 
 resnet_transform = Config({
@@ -880,6 +890,17 @@ yolact_plus_resnet50_bracot_config = yolact_plus_resnet50_config.copy({
     # Image Size
     'max_size': 500,
 })
+
+yolact_plus_resnet50_rocole_config = yolact_plus_resnet50_config.copy({
+    'name': 'yolact_plus_resnet50_rocole',
+    # Dataset stuff
+    'dataset': rocole_dataset,
+    'num_classes': len(rocole_dataset.class_names) + 1,
+
+    # Image Size
+    'max_size': 416,
+})
+
 
 
 # Default config
