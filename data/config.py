@@ -218,8 +218,8 @@ rocole_dataset = dataset_base.copy({
   'train_images': './dataset/rocole/train',
   'valid_info': './dataset/rocole/test_annotations.coco.json',
   'valid_images': './dataset/rocole/test',
-  'class_names': ('healthy', 'red_spider_mite', 'rust_level_1', 'rust_level_2', 'rust_level_3', 'rust_level_4',),
-  'label_map': { 0:  1, 1: 2, 2:3, 4:5, 5:6}
+  'class_names': ('healthy', 'red_spider_mite', 'rust_level_1', 'rust_level_2', 'rust_level_3', 'rust_level_4', 'none'),
+  'label_map': { 0:  1, 1: 2, 2:3, 4:5, 5:6, 6:7}
 })
 
 # ----------------------- TRANSFORMS ----------------------- #
