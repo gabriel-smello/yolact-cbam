@@ -221,6 +221,15 @@ rocole_dataset = dataset_base.copy({
   'class_names': ('healthy', 'red_spider_mite', 'rust_level_1', 'rust_level_2', 'rust_level_3', 'rust_level_4', 'none'),
 })
 
+bracol_dataset = dataset_base.copy({
+  'name': 'Bracol',
+  'train_info': './dataset/bracol/train_annotations.json',
+  'train_images': './dataset/bracol/train',
+  'valid_info': './dataset/bracol/test_annotations.json',
+  'valid_images': './dataset/bracol/test',
+  'class_names': ('miner', 'rust', 'phoma', 'cercospora', 'healthy'),
+})
+
 # ----------------------- TRANSFORMS ----------------------- #
 
 resnet_transform = Config({
@@ -898,6 +907,16 @@ yolact_plus_resnet50_rocole_config = yolact_plus_resnet50_config.copy({
 
     # Image Size
     'max_size': 416,
+})
+
+yolact_plus_resnet50_bracol_config = yolact_plus_resnet50_config.copy({
+    'name': 'yolact_plus_resnet50_bracol',
+    # Dataset stuff
+    'dataset': bracol_dataset,
+    'num_classes': len(bracol_dataset.class_names) + 1,
+
+    # Image Size
+    'max_size': 500,
 })
 
 
