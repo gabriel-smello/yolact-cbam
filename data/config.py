@@ -223,10 +223,10 @@ rocole_dataset = dataset_base.copy({
 
 bracol_dataset = dataset_base.copy({
   'name': 'Bracol',
-  'train_info': './dataset/bracol-resized/train_annotations.coco.json',
-  'train_images': './dataset/bracol-resized/train',
-  'valid_info': './dataset/bracol-resized/test_annotations.coco.json',
-  'valid_images': './dataset/bracol-resized/test',
+  'train_info': './dataset/bracol/train_annotations_coco.json',
+  'train_images': './dataset/bracol/train',
+  'valid_info': './dataset/bracol/test_annotations_coco.json',
+  'valid_images': './dataset/bracol/test',
   'class_names': ('miner', 'rust', 'phoma', 'cercospora'),
 })
 
