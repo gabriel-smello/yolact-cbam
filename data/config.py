@@ -204,12 +204,11 @@ wgisd_dataset = dataset_base.copy({
 
 bracot_dataset = dataset_base.copy({
   'name': 'Bracot',
-  'train_info': './dataset/bracot-data/train_annotation_coco.json',
-  'train_images': './dataset/bracot-data/train',
-  'valid_info': './dataset/bracot-data/test_annotation_coco.json',
-  'valid_images': './dataset/bracot-data/test',
+  'train_info': './dataset/bracot/train_annotations.coco.json',
+  'train_images': './dataset/bracot/train',
+  'valid_info': './dataset/bracot/test_annotations.coco.json',
+  'valid_images': './dataset/bracot/test',
   'class_names': ('Leaf', 'None',),
-  'label_map': { 0:  1, 1: 2}
 })
 
 rocole_dataset = dataset_base.copy({
