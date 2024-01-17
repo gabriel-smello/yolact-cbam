@@ -578,7 +578,7 @@ class APDataObject:
 
         # Finally compute the riemann sum to get our integral.
         # avg([precision(x) for x in 0:0.01:1])
-        return sum(y_range) / len(y_range)
+        return sum(y_range) / len(y_range), precision, recall
 
 def badhash(x):
     """
@@ -1017,22 +1017,34 @@ def calc_map(ap_data):
 
         all_maps = {'box': OrderedDict(), 'mask': OrderedDict()}
         for iou_type in ('box', 'mask'):
-            all_maps[iou_type]['all'] = 0  # Make this first in the ordereddict
+            all_maps[iou_type]['all'] = (0, 0, 0)  # Make this first in the ordereddict
             for i, threshold in enumerate(iou_thresholds):
-                mAP = aps[i][iou_type][_class] * 100 if len(aps[i][iou_type]) > 0 else 0
+                mAP = (aps[i][iou_type][_class][0] * 100 if len(aps[i][iou_type]) > 0 else 0,
+                       aps[i][iou_type][_class][1] * 100 if len(aps[i][iou_type]) > 0 else 0,
+                       aps[i][iou_type][_class][0] * 100 if len(aps[i][iou_type]) > 0 else 0
+                       )
                 all_maps[iou_type][int(threshold * 100)] = mAP
-            all_maps[iou_type]['all'] = (sum(all_maps[iou_type].values()) / (len(all_maps[iou_type].values()) - 1))
+            all_values = list(all_maps[iou_type].values())
+            all_maps[iou_type]['all'] = (sum(x[0] for x in all_values) / (len(all_values)-1),
+                                         sum(x[1] for x in all_values) / (len(all_values)-1),
+                                         sum(x[2] for x in all_values) / (len(all_values)-1))
         print('#################### Class:', cfg.dataset.class_names[_class], '####################')
         print_maps(all_maps)
 
     all_maps = {'box': OrderedDict(), 'mask': OrderedDict()}
     # Looking back at it, this code is really hard to read :/
     for iou_type in ('box', 'mask'):
-        all_maps[iou_type]['all'] = 0 # Make this first in the ordereddict
+        all_maps[iou_type]['all'] = (0, 0, 0) # Make this first in the ordereddict
         for i, threshold in enumerate(iou_thresholds):
-            mAP = sum(aps[i][iou_type]) / len(aps[i][iou_type]) * 100 if len(aps[i][iou_type]) > 0 else 0
+            all_values = list(aps[i][iou_type])
+            mAP = (sum(x[0] for x in all_values) / len(all_values) * 100 if len(all_values) > 0 else 0,
+                   sum(x[1] for x in all_values) / len(all_values) * 100 if len(all_values) > 0 else 0,
+                   sum(x[2] for x in all_values) / len(all_values) * 100 if len(all_values) > 0 else 0)
             all_maps[iou_type][int(threshold*100)] = mAP
-        all_maps[iou_type]['all'] = (sum(all_maps[iou_type].values()) / (len(all_maps[iou_type].values())-1))
+        all_values = list(all_maps[iou_type].values())
+        all_maps[iou_type]['all'] = (sum(x[0] for x in all_values) / (len(all_values)-1),
+                                     sum(x[1] for x in all_values) / (len(all_values)-1),
+                                     sum(x[2] for x in all_values) / (len(all_values)-1))
     
     print_maps(all_maps)
     
@@ -1049,7 +1061,7 @@ def print_maps(all_maps):
     print(make_row([''] + [('.%d ' % x if isinstance(x, int) else x + ' ') for x in all_maps['box'].keys()]))
     print(make_sep(len(all_maps['box']) + 1))
     for iou_type in ('box', 'mask'):
-        print(make_row([iou_type] + ['%.2f' % x if x < 100 else '%.1f' % x for x in all_maps[iou_type].values()]))
+        print(make_row([iou_type] + ['%.2f, %.2f, %.2f' % (x[0], x[1], x[2]) for x in all_maps[iou_type].values()]))
     print(make_sep(len(all_maps['box']) + 1))
     print()
 
