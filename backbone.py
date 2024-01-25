@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import pickle
-from cbam import *
+from cbam import CBAM
 
 from collections import OrderedDict
 
@@ -11,6 +11,42 @@ except ImportError:
     def DCN(*args, **kwdargs):
         raise Exception('DCN could not be imported. If you want to use YOLACT++ models, compile DCN. Check the README for instructions.')
 
+def conv3x3(in_planes, out_planes, stride=1):
+    "3x3 convolution with padding"
+    return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
+                     padding=1, bias=False)
+
+class ChannelAttention(nn.Module):
+    def __init__(self, in_planes, ratio=16):
+        super(ChannelAttention, self).__init__()
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.max_pool = nn.AdaptiveMaxPool2d(1)
+           
+        self.fc = nn.Sequential(nn.Conv2d(in_planes, in_planes // 16, 1, bias=False),
+                               nn.ReLU(),
+                               nn.Conv2d(in_planes // 16, in_planes, 1, bias=False))
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x):
+        avg_out = self.fc(self.avg_pool(x))
+        max_out = self.fc(self.max_pool(x))
+        out = avg_out + max_out
+        return self.sigmoid(out)
+
+class SpatialAttention(nn.Module):
+    def __init__(self, kernel_size=7):
+        super(SpatialAttention, self).__init__()
+
+        self.conv1 = nn.Conv2d(2, 1, kernel_size, padding=kernel_size//2, bias=False)
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x):
+        avg_out = torch.mean(x, dim=1, keepdim=True)
+        max_out, _ = torch.max(x, dim=1, keepdim=True)
+        x = torch.cat([avg_out, max_out], dim=1)
+        x = self.conv1(x)
+        return self.sigmoid(x)
+    
 class Bottleneck(nn.Module):
     """ Adapted from torchvision.models.resnet """
     expansion = 4
@@ -32,15 +68,12 @@ class Bottleneck(nn.Module):
         self.conv3 = nn.Conv2d(planes, planes * 4, kernel_size=1, bias=False, dilation=dilation)
         self.bn3 = norm_layer(planes * 4)
         self.relu = nn.ReLU(inplace=True)
+        
+        self.ca = ChannelAttention(planes * 4)
+        self.sa = SpatialAttention()
+        
         self.downsample = downsample
         self.stride = stride
-
-        if use_cbam:
-            print('use_cbam bottleneck true')
-            self.cbam = CBAM( planes * 4, 16 )
-        else:
-            print('use_cbam bottleneck false')
-            self.cbam = None
 
     def forward(self, x):
         residual = x
@@ -55,12 +88,12 @@ class Bottleneck(nn.Module):
 
         out = self.conv3(out)
         out = self.bn3(out)
+        
+        out = self.ca(out) * out
+        out = self.sa(out) * out
 
         if self.downsample is not None:
             residual = self.downsample(x)
-
-        if not self.cbam is None:
-            out = self.cbam(out)
 
         out += residual
         out = self.relu(out)
@@ -71,7 +104,7 @@ class Bottleneck(nn.Module):
 class ResNetBackbone(nn.Module):
     """ Adapted from torchvision.models.resnet """
 
-    def __init__(self, layers, dcn_layers=[0, 0, 0, 0], dcn_interval=1, atrous_layers=[], block=Bottleneck, norm_layer=nn.BatchNorm2d, use_cbam=True):
+    def __init__(self, layers, dcn_layers=[0, 0, 0, 0], dcn_interval=1, atrous_layers=[], block=Bottleneck, norm_layer=nn.BatchNorm2d, use_cbam=True, num_classes=1000):
         super().__init__()
 
         # These will be populated by _make_layer
@@ -94,6 +127,8 @@ class ResNetBackbone(nn.Module):
         self._make_layer(block, 128, layers[1], stride=2, dcn_layers=dcn_layers[1], dcn_interval=dcn_interval, use_cbam=use_cbam)
         self._make_layer(block, 256, layers[2], stride=2, dcn_layers=dcn_layers[2], dcn_interval=dcn_interval, use_cbam=use_cbam)
         self._make_layer(block, 512, layers[3], stride=2, dcn_layers=dcn_layers[3], dcn_interval=dcn_interval, use_cbam=use_cbam)
+        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+        self.fc = nn.Linear(512 * block.expansion, num_classes)
         """
         self.fc = nn.Linear(512 * block.expansion, num_classes)
         
@@ -137,12 +172,10 @@ class ResNetBackbone(nn.Module):
 
         layers = []
         use_dcn = (dcn_layers >= blocks)
-        print('make_layer antes do for')
         layers.append(block(self.inplanes, planes, stride, downsample, self.norm_layer, self.dilation, use_dcn=use_dcn, use_cbam=use_cbam))
         self.inplanes = planes * block.expansion
         for i in range(1, blocks):
             use_dcn = ((i+dcn_layers) >= blocks) and (i % dcn_interval == 0)
-            print('make_layer no for')
             layers.append(block(self.inplanes, planes, norm_layer=self.norm_layer, use_dcn=use_dcn, use_cbam=use_cbam))
         layer = nn.Sequential(*layers)
 
@@ -163,6 +196,10 @@ class ResNetBackbone(nn.Module):
         for layer in self.layers:
             x = layer(x)
             outs.append(x)
+            
+        x = self.avgpool(x)
+        x = x.view(x.size(0), -1)
+        x = self.fc(x)
 
         return tuple(outs)
 
