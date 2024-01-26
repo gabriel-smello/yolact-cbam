@@ -532,13 +532,12 @@ class APDataObject:
 
     def get_ap(self) -> float:
         """ Warning: result not cached. """
-
         if self.num_gt_positives == 0:
             return 0
 
         # Sort descending by score
         self.data_points.sort(key=lambda x: -x[0])
-
+        
         precisions = []
         recalls    = []
         fscores = []
@@ -558,7 +557,6 @@ class APDataObject:
             precisions.append(precision)
             recalls.append(recall)
             fscores.append(fscore)
-
         # Smooth the curve by computing [max(precisions[i:]) for i in range(len(precisions))]
         # Basically, remove any temporary dips from the curve.
         # At least that's what I think, idk. COCOEval did it so I do too.
@@ -581,7 +579,7 @@ class APDataObject:
 
         # Finally compute the riemann sum to get our integral.
         # avg([precision(x) for x in 0:0.01:1])
-        return sum(y_range) / len(y_range), precisions[-1], recalls[-1], fscores[-1]
+        return sum(y_range) / len(y_range), sum(precisions) / len(precisions), sum(recalls) / len(recalls), sum(fscores) / len(fscores)
 
 def badhash(x):
     """
