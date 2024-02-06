@@ -579,8 +579,14 @@ class APDataObject:
 
         # Finally compute the riemann sum to get our integral.
         # avg([precision(x) for x in 0:0.01:1])
-        return sum(y_range) / len(y_range), sum(precisions) / len(precisions), sum(recalls) / len(recalls), sum(fscores) / len(fscores)
-
+        
+        mapReturn = sum(y_range) / len(y_range) if len(y_range) > 0 else 0
+        precisionReturn = sum(precisions) / len(precisions) if len(precisions) > 0 else 0
+        recallReturn = sum(recalls) / len(recalls) if len(recalls) > 0 else 0
+        fscoreReturn = sum(fscores) / len(fscores) if len(fscores) > 0 else 0
+        
+        return mapReturn, precisionReturn, recallReturn, fscoreReturn
+    
 def badhash(x):
     """
     Just a quick and dirty hash function for doing a deterministic shuffle based on image_id.

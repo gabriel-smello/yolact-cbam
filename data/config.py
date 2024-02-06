@@ -226,7 +226,7 @@ bracol_dataset = dataset_base.copy({
   'train_images': './dataset/bracol-annotated/train',
   'valid_info': './dataset/bracol-annotated/test_annotations_coco.json',
   'valid_images': './dataset/bracol-annotated/test',
-  'class_names': ('miner', 'rust', 'phoma', 'cercospora'),
+  'class_names': ('healthy', 'miner', 'rust', 'phoma', 'cercospora'),
 })
 
 # ----------------------- TRANSFORMS ----------------------- #
