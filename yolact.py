@@ -16,6 +16,7 @@ from backbone import construct_backbone
 import torch.backends.cudnn as cudnn
 from utils import timer
 from utils.functions import MovingAverage, make_net
+from cbam import CBAM
 
 # This is required for Pytorch 1.0.1 on Windows to initialize Cuda on some driver versions.
 # See the bug report here: https://github.com/pytorch/pytorch/issues/17108
@@ -282,7 +283,7 @@ class FPN(ScriptModuleWrapper):
 
     def __init__(self, in_channels):
         super().__init__()
-
+        print(in_channels)
         self.lat_layers  = nn.ModuleList([
             nn.Conv2d(x, cfg.fpn.num_features, kernel_size=1)
             for x in reversed(in_channels)
@@ -300,7 +301,7 @@ class FPN(ScriptModuleWrapper):
                 nn.Conv2d(cfg.fpn.num_features, cfg.fpn.num_features, kernel_size=3, padding=1, stride=2)
                 for _ in range(cfg.fpn.num_downsample)
             ])
-        
+            
         self.interpolation_mode     = cfg.fpn.interpolation_mode
         self.num_downsample         = cfg.fpn.num_downsample
         self.use_conv_downsample    = cfg.fpn.use_conv_downsample
@@ -333,7 +334,7 @@ class FPN(ScriptModuleWrapper):
             
             x = x + lat_layer(convouts[j])
             out[j] = x
-        
+            
         # This janky second loop is here because TorchScript.
         j = len(convouts)
         for pred_layer in self.pred_layers:
@@ -374,6 +375,84 @@ class FastMaskIoUNet(ScriptModuleWrapper):
 
         return maskiou_p
 
+class FPNWithCBAM(nn.Module):
+    def __init__(self, in_channels, gate_channels, reduction_ratio=16, pool_types=['avg', 'max']):
+        super(FPNWithCBAM, self).__init__()
+
+        # FPN layers
+        self.lat_layers = nn.ModuleList([
+            nn.Conv2d(x, cfg.fpn.num_features, kernel_size=1)
+            for x in reversed(in_channels)
+        ])
+
+        padding = 1 if cfg.fpn.pad else 0
+        self.pred_layers = nn.ModuleList([
+            nn.Conv2d(cfg.fpn.num_features, cfg.fpn.num_features, kernel_size=3, padding=padding)
+            for _ in in_channels
+        ])
+
+        if cfg.fpn.use_conv_downsample:
+            self.downsample_layers = nn.ModuleList([
+                nn.Conv2d(cfg.fpn.num_features, cfg.fpn.num_features, kernel_size=3, padding=1, stride=2)
+                for _ in range(cfg.fpn.num_downsample)
+            ])
+
+        # CBAM attention module
+        self.cbam_layers = nn.ModuleList([
+            CBAM(gate_channels, reduction_ratio, pool_types)
+            for _ in range(len(in_channels))
+        ])
+
+        self.interpolation_mode = cfg.fpn.interpolation_mode
+        self.num_downsample = cfg.fpn.num_downsample
+        self.use_conv_downsample = cfg.fpn.use_conv_downsample
+        self.relu_downsample_layers = cfg.fpn.relu_downsample_layers
+        self.relu_pred_layers = cfg.fpn.relu_pred_layers
+
+    def forward(self, convouts: List[torch.Tensor]):
+        out = []
+        x = torch.zeros(1, device=convouts[0].device)
+
+        # Perform FPN latencies
+        j = len(convouts)
+        for lat_layer in self.lat_layers:
+            j -= 1
+
+            if j < len(convouts) - 1:
+                _, _, h, w = convouts[j].size()
+                x = F.interpolate(x, size=(h, w), mode=self.interpolation_mode, align_corners=False)
+
+            x = x + lat_layer(convouts[j])
+            out.append(x)
+
+        # Apply CBAM attention
+        for i, cbam_layer in enumerate(self.cbam_layers):
+            out[i] = cbam_layer(out[i])
+
+        # Perform FPN predictions
+        j = len(convouts)
+        for pred_layer in self.pred_layers:
+            j -= 1
+            out[j] = pred_layer(out[j])
+
+            if self.relu_pred_layers:
+                F.relu(out[j], inplace=True)
+
+        cur_idx = len(out)
+
+        # Downsample layers
+        if self.use_conv_downsample:
+            for downsample_layer in self.downsample_layers:
+                out.append(downsample_layer(out[-1]))
+        else:
+            for _ in range(self.num_downsample):
+                out.append(nn.functional.max_pool2d(out[-1], 1, stride=2))
+
+        if self.relu_downsample_layers:
+            for idx in range(len(out) - cur_idx):
+                out[idx] = F.relu(out[idx + cur_idx], inplace=False)
+
+        return out
 
 
 class Yolact(nn.Module):
@@ -433,10 +512,11 @@ class Yolact(nn.Module):
 
         if cfg.use_maskiou:
             self.maskiou_net = FastMaskIoUNet()
-
+        print(f'src_channels: {src_channels}')
+        print(f'selected layers: {self.selected_layers}')
         if cfg.fpn is not None:
             # Some hacky rewiring to accomodate the FPN
-            self.fpn = FPN([src_channels[i] for i in self.selected_layers])
+            self.fpn = FPNWithCBAM(in_channels=[256, 512, 1024, 2048], gate_channels=256)
             self.selected_layers = list(range(len(self.selected_layers) + cfg.fpn.num_downsample))
             src_channels = [cfg.fpn.num_features] * len(self.selected_layers)
 
@@ -573,7 +653,6 @@ class Yolact(nn.Module):
         if cfg.fpn is not None:
             with timer.env('fpn'):
                 # Use backbone.selected_layers because we overwrote self.selected_layers
-                outs = [outs[i] for i in cfg.backbone.selected_layers]
                 outs = self.fpn(outs)
 
         proto_out = None
