@@ -7,6 +7,7 @@ from itertools import product
 from math import sqrt
 from typing import List
 from collections import defaultdict
+from cbam import CBAM
 
 from data.config import cfg, mask_type
 from layers import Detect
@@ -470,6 +471,8 @@ class Yolact(nn.Module):
         self.detect = Detect(cfg.num_classes, bkg_label=0, top_k=cfg.nms_top_k,
             conf_thresh=cfg.nms_conf_thresh, nms_thresh=cfg.nms_thresh)
 
+        self.cbam_modules = nn.ModuleList([CBAM(in_channels) for in_channels in [cfg.fpn.num_features] * len(self.selected_layers)])
+        
     def save_weights(self, path):
         """ Saves the model's weights using compression because the file sizes were getting too big. """
         torch.save(self.state_dict(), path)
@@ -575,6 +578,7 @@ class Yolact(nn.Module):
                 # Use backbone.selected_layers because we overwrote self.selected_layers
                 outs = [outs[i] for i in cfg.backbone.selected_layers]
                 outs = self.fpn(outs)
+                outs = [self.cbam_modules[i](feature) for i, feature in enumerate(self.fpn(outs))]
 
         proto_out = None
         if cfg.mask_type == mask_type.lincomb and cfg.eval_mask_branch:
